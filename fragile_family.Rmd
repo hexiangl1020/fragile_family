@@ -16,14 +16,19 @@ fragile_families<-read_dta('FF_allwaves_2020v2.dta')
 ```
 
 ```{r}
-selected<-c('idnum','k6d2k','k6d1b','k6d1c','k6d1e','k6d1f','k6d1j')
-six_cols<-fragile_families[,selected]
-six_cols1 <- six_cols %>% filter_at(colnames(six_cols), all_vars(. >= 0))#drop negative values
-six_cols1$k6d2k<-5-six_cols1$k6d2k
-six_cols1[,c(2:7)]<-lapply(six_cols1[,c(2:7)],as.numeric)
-six_cols1$idnum<-as.character(six_cols1$idnum)
-six_cols1<-as.data.frame(six_cols1)
-six_cols1<-six_cols1 %>% mutate(new_y=4*k6d2k+4*k6d1b+4*k6d1c+6*k6d1e+6*k6d1f+6*k6d1j)
+selected2<-c('idnum','k6d1a','k6d1b','k6d1c','k6d1d','k6d1e','k6d1f','k6d1g','k6d1h',
+              'k6d1i','k6d1j','k6d1k','k6d1l')
+twelve_cols<-fragile_families[,selected2]
+twelve_cols1 <- twelve_cols %>% filter_at(colnames(twelve_cols), all_vars(. >= 0))#drop negative values
+twelve_cols1$idnum<-as.character(twelve_cols1$idnum)
+twelve_cols1[,c(2:13)]<-twelve_cols1[,c(2:13)]-1
+twelve_cols1$wellbeing<-rowSums(twelve_cols1[,c(2:13)])
+final_y<-twelve_cols1[,c(1,14)]
+final_y_100<-final_y%>%mutate(wellbeing=round(4.16*wellbeing))
 ```
 
+```{r}
+#write.csv(final_y,"final_y.csv", row.names = FALSE)
+#write.csv(final_y_100,"final_y_100.csv", row.names = FALSE)
+```
 
