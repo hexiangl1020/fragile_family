@@ -8,27 +8,200 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(fig.height=4, fig.width=6, warning = F)
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(randomForest, tree, ISLR, rpart, rattle, pROC, partykit, ggplot2, glmnet, leaps, dplyr, keras, neuralnet, imager, ranger,haven,labelled)
+pacman::p_load(randomForest, tree, ISLR, rpart, rattle, pROC, partykit, ggplot2, glmnet, leaps, dplyr, keras, neuralnet, imager, ranger,haven,labelled,mice,car)
 ```
 
 ```{r}
 fragile_families<-read_dta('FF_allwaves_2020v2.dta')
 ```
 
-```{r}
-selected2<-c('idnum','k6d1a','k6d1b','k6d1c','k6d1d','k6d1e','k6d1f','k6d1g','k6d1h',
-              'k6d1i','k6d1j','k6d1k','k6d1l')
-twelve_cols<-fragile_families[,selected2]
-twelve_cols1 <- twelve_cols %>% filter_at(colnames(twelve_cols), all_vars(. >= 0))#drop negative values
-twelve_cols1$idnum<-as.character(twelve_cols1$idnum)
-twelve_cols1[,c(2:13)]<-twelve_cols1[,c(2:13)]-1
-twelve_cols1$wellbeing<-rowSums(twelve_cols1[,c(2:13)])
-final_y<-twelve_cols1[,c(1,14)]
-final_y_100<-final_y%>%mutate(wellbeing=round(4.16*wellbeing))
+```{r, no need to run this }
+# selected2<-c('idnum','k6d1a','k6d1b','k6d1c','k6d1d','k6d1e','k6d1f','k6d1g','k6d1h',
+#               'k6d1i','k6d1j','k6d1k','k6d1l')
+# twelve_cols<-fragile_families[,selected2]
+# twelve_cols1 <- twelve_cols %>% filter_at(colnames(twelve_cols), all_vars(. >= 0))#drop negative values
+# twelve_cols1$idnum<-as.character(twelve_cols1$idnum)
+# twelve_cols1[,c(2:13)]<-twelve_cols1[,c(2:13)]-1
+# twelve_cols1$wellbeing<-rowSums(twelve_cols1[,c(2:13)])
+# final_y<-twelve_cols1[,c(1,14)]
+# final_y_100<-final_y%>%mutate(wellbeing=round(4.16*wellbeing))
 ```
 
 ```{r}
 #write.csv(final_y,"final_y.csv", row.names = FALSE)
 #write.csv(final_y_100,"final_y_100.csv", row.names = FALSE)
+```
+
+```{r, selected all columns we need}
+selectedx<-c('idnum','k5e2a','f1h2','f1e3','m1e4b','m1j2b','f1g7','m1a13','m1g2','m1g3','m1g4','f1f2','m1f5','f1b18','f1c2f','f1b10','f1b23d','m1a7','m1b7b','m1b18','f2b29c','m2g6c','f2k1a','f2k6','f2k12','m2k14','m2d3a','m2g4c','m2g13','f2h8a2','f2h10','f2l9','m2b34a','m2h8e','m2h8b','m2h11','m2h19b','f2b3','f2b2','f2b12','f2b9','m2b8a','m2h19i','m2j16','f2h1a','f2h19','f2h25','f2a6a','f4b8','m4d3','m4i7b','f4b4b6','f4b29a9','f4b29a12','m4b29a18','o4v6c','p4b15','p4l3','p4l5','p4l11','p4l19','p4l22','p4l28','p4l32','p4l43','t4b1a','t4e2c','f4h1d','m4h1g','m4h1d','f4i0e','f4i0h','m4i0g','m4h4','m4i0p','f4i8a1','f4j24a','p4a22','p4b23','t4a13','f4a2','f4i0n1','o4r10','p4b9','p4b21_1','p4c8','p4h1')
+x_table<-fragile_families[,selectedx]
+```
+
+```{r, check each column if they have more than 2000 NAs, if yes, drop those columns}
+# x_table1<-data.frame(x_table)
+# for(i in 1:ncol(x_table)) {       # for-loop over columns
+#   num_of_na<-nrow(x_table[x_table[,i]<0,])
+#   print(num_of_na)
+#   print(name_col<-names(x_table)[i])
+#   name_col<-names(x_table)[i]
+#   if ( num_of_na >2000) {
+#     x_table1<-x_table1[ , !(colnames(x_table1) %in% c(name_col))]
+#   }
+#   
+# }
+
+```
+
+```{r, double check remained column}
+# for(i in 1:ncol(x_table1)) {       # for-loop over columns
+#   num_of_na<-nrow(x_table1[x_table1[,i]<0,])
+#   print(num_of_na)
+#   }
+```
+
+```{r, prepare x, replace all negative values to NA}
+# x_na<-data.frame(x_table1)
+# x_na[x_na < 0] <- NA
+# x_na$idnum<-as.character(x_na$idnum)
+# x_na$p4b23<-as.numeric(x_na$p4b23)
+# x_na %<>% mutate_at(c(2:47,49:54), factor)
+```
+
+```{r, impute NA for all categorical columns}
+# x.impmi<-mice(x_na[,c(2:47,49:54)], m = 5,method='polr',maxit=5,            
+#                  diagnostics=TRUE)
+```
+
+```{r, merge the imputed back}
+# x.impmi$imp$k5e2a
+# imp_data<-mice::complete(x.impmi)
+# #write.csv(imp_data,"impute_factors.csv", row.names = FALSE)
+# str(imp_data)
+# str(x_na)
+```
+
+```{r,impute the numeric column and merge it back, x_variables finished}
+# x_na1<-data.frame(imp_data)
+# x.impmi2<-mice(x_na[,c(1,48)], m = 5,method='pmm',maxit=5,            
+#                  diagnostics=TRUE)
+# imp_data2<-mice::complete(x.impmi2)
+# imp_data2<-data.frame(imp_data2)
+# #write.csv(imp_data2,"impute_num.csv", row.names = FALSE)
+# impute_all<-cbind(imp_data2,imp_data)
+# #write.csv(impute_all,"x_variables.csv", row.names = FALSE)
+# str(impute_all)
+# summary(impute_all)
+# summary(x_na)
+```
+*we have two choices, leave the categorical as categorical or change it to numeric. I tried both method and I found numeric is better. We can change it to numeric directly because they are ordered categorical columns in our project.*  
+
+```{r, EDA start}
+y_data<-read.csv('final_y_100.csv')
+x_data<-read.csv('x_variables.csv')
+x_data$idnum<-as.character(x_data$idnum)
+x_data$p4b23<-as.numeric(x_data$p4b23)
+#x_data %<>% mutate_at(c(3:54), factor)
+#str(x_data)
+cleaned_data<-merge(x_data,y_data,on='idnum')
+data.fl<-select(cleaned_data,-c(1))
+#str(cleaned_data)
+summary(data.fl)
+```
+
+Some EDA
+
+```{r}
+data.fl%>%ggplot(aes(x=wellbeing))+geom_histogram(bins=25,colour = 1, fill = "white")
+data.fl%>%ggplot(aes(x=wellbeing))+
+  geom_histogram(aes(y=..density..),bins=25,colour = 1, fill = "white")+
+  geom_density(lwd = 1.2,
+               linetype = 2,
+               colour = 2)+theme_light()
+```
+In our study, what we want to study is the children's wellbeing, so we first take a look at the distribution of their wellbeing grades.The histogram is little skewed to the left.
+
+Let's also pick a few x columns and look their distribution
+```{r}
+data.fl%>%select(p4l11,m2h8e,m4i0p)%>%
+  ggplot(aes(x=p4l11,fill=factor(p4l11)))+geom_bar()+
+  ggtitle(' Child is sympathetic toward other children\'s distress\n 0-Not true, 1-Very True')
+
+data.fl%>%select(p4l11,m2h8e,m4i0p)%>%
+  ggplot(aes(x=m2h8e,fill=factor(m2h8e)))+geom_bar()+
+  ggtitle('Since child\'s birth, have you received help from-WIC Program?\n 1-Yes, 2-No')
+
+data.fl%>%select(p4l11,m2h8e,m4i0p)%>%
+  ggplot(aes(x=m4i0p,fill=factor(m4i0p)))+geom_bar()+
+  ggtitle('Participate in any groups (sr ctr/social/work group/church/charity/service/comm\n 1-Yes, 2-No')
+```
+I tried linear regression first, the r-square is low. 
+
+
+```{r}
+#linear
+fit.all<-lm(wellbeing~.,no_id)
+summary(fit.all)
+Anova(fit.all)
+```
+
+```{r}
+#lasso for linear
+Y <- data.fl[, 54] # extract Y
+X.fl <- model.matrix(wellbeing~., data=data.fl)[, -1] # take the first column's of 1 out
+#Step 2: Find x's output from LASSO with min cross-validation error
+set.seed(10)  # to control the ramdomness in K folds 
+fit.fl.cv <- cv.glmnet(X.fl, Y, alpha=1, nfolds=10, intercept = T) 
+coef.1se <- coef(fit.fl.cv, s="lambda.1se")  #s=c("lambda.1se","lambda.min") or lambda value
+plot(fit.fl.cv)
+coef.1se <- coef.1se[which(coef.1se !=0),]   # get the non=zero coefficients
+var.1se <- rownames(as.matrix(coef.1se))[-1] # output the names  dim(as.matrix(coef.min))
+
+data.fl.sub <-  data.fl[,c("wellbeing","m2h8e", "p4l11",
+                           "p4l32", "m4h4","m4i0p","p4b9")] 
+#names(data.fl.sub)
+fit.1se.lm <- lm(wellbeing~., data=data.fl.sub)  # debiased or relaxed LASSO
+summary(fit.1se.lm) 
+plot(fit.1se.lm,1)
+plot(fit.1se.lm,2)
+```
+Then I tried logistic regression, by defining 70+ as wellbeing. 
+The significant variables makes some sense, but I think it's still not good. 
+We should move to random forest. 
+
+```{r}
+#logistic
+data.fl1<-data.frame(data.fl)
+data.fl1$wellbeing[data.fl1$wellbeing < 70]<-0
+data.fl1$wellbeing[data.fl1$wellbeing >= 70] <- 1
+data.fl1$wellbeing<-as.factor(data.fl1$wellbeing)
+```
+
+```{r}
+fit.all1<-glm(wellbeing~.,data.fl1, family =binomial)
+summary(fit.all1)
+Anova(fit.all1)
+```
+
+```{r}
+Y1 <- data.fl1[, 54] # extract Y
+X.fl1 <- model.matrix(wellbeing~., data=data.fl1)[, -1] # take the first column's of 1 out
+#Step 2: Find x's output from LASSO with min cross-validation error
+set.seed(10)  # to control the ramdomness in K folds 
+fit.fl.cv1 <- cv.glmnet(X.fl1, Y1, family="binomial",alpha=1, nfolds=10,  type.measure = "deviance") 
+coef.1se1 <- coef(fit.fl.cv1, s='lambda.1se')  #s=c("lambda.1se","lambda.min") or lambda value
+plot(fit.fl.cv1)
+coef.1se1<- coef.1se1[which(coef.1se1 !=0),]   # get the non=zero coefficients
+var.1se1 <- rownames(as.matrix(coef.1se1))[-1] # output the names  dim(as.matrix(coef.1se1))
+
+data.fl.sub1 <-  data.fl1[,c("wellbeing",'k5e2a','m1a7','m2g6c','m2g4c',
+                             "m2h8e", "p4l11","p4l43", "m4h4","m4i0p","p4b9",'p4b21_1')]
+
+data.fl.sub1 <-  data.fl1[,c("wellbeing",var.1se1)]
+
+#names(data.fl.sub)
+fit.1se.glm <- glm(wellbeing~., data=data.fl.sub1,family=binomial)  # debiased or relaxed LASSO
+summary(fit.1se.glm)
+fit.1se.glm.pred<- ifelse(fit.1se.glm$fitted > 0.5, "1", "0")
+table(fit.1se.glm.pred,data.fl1$wellbeing)
 ```
 
