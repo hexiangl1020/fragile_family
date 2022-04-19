@@ -1,0 +1,333 @@
+---
+title: "rmd"
+author: "Hexiang Liu"
+date: "4/5/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.height=4, fig.width=6, warning = F)
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(randomForest, tree, ISLR, rpart, rattle, pROC, partykit, ggplot2, glmnet, leaps, dplyr, keras, neuralnet, imager, ranger,haven,labelled,mice,car)
+```
+
+```{r}
+#fragile_families<-read_dta('FF_allwaves_2020v2.dta')
+```
+
+```{r, no need to run this }
+# selected2<-c('idnum','k6d1a','k6d1b','k6d1c','k6d1d','k6d1e','k6d1f','k6d1g','k6d1h',
+#               'k6d1i','k6d1j','k6d1k','k6d1l')
+# twelve_cols<-fragile_families[,selected2]
+# twelve_cols1 <- twelve_cols %>% filter_at(colnames(twelve_cols), all_vars(. >= 0))#drop negative values
+# twelve_cols1$idnum<-as.character(twelve_cols1$idnum)
+# twelve_cols1[,c(2:13)]<-twelve_cols1[,c(2:13)]-1
+# twelve_cols1$wellbeing<-rowSums(twelve_cols1[,c(2:13)])
+# final_y<-twelve_cols1[,c(1,14)]
+# final_y_100<-final_y%>%mutate(wellbeing=round(4.16*wellbeing))
+```
+
+```{r}
+#write.csv(final_y,"final_y.csv", row.names = FALSE)
+#write.csv(final_y_100,"final_y_100.csv", row.names = FALSE)
+```
+
+```{r, selected all columns we need}
+#selectedx<-c('idnum','k5e2a','f1h2','f1e3','m1e4b','m1j2b','f1g7','m1a13','m1g2','m1g3','m1g4','f1f2','m1f5','f1b18','f1c2f','f1b10','f1b23d','m1a7','m1b7b','m1b18','f2b29c','m2g6c','f2k1a','f2k6','f2k12','m2k14','m2d3a','m2g4c','m2g13','f2h8a2','f2h10','f2l9','m2b34a','m2h8e','m2h8b','m2h11','m2h19b','f2b3','f2b2','f2b12','f2b9','m2b8a','m2h19i','m2j16','f2h1a','f2h19','f2h25','f2a6a','f4b8','m4d3','m4i7b','f4b4b6','f4b29a9','f4b29a12','m4b29a18','o4v6c','p4b15','p4l3','p4l5','p4l11','p4l19','p4l22','p4l28','p4l32','p4l43','t4b1a','t4e2c','f4h1d','m4h1g','m4h1d','f4i0e','f4i0h','m4i0g','m4h4','m4i0p','f4i8a1','f4j24a','p4a22','p4b23','t4a13','f4a2','f4i0n1','o4r10','p4b9','p4b21_1','p4c8','p4h1')
+#x_table<-fragile_families[,selectedx]
+```
+
+```{r, check each column if they have more than 2000 NAs, if yes, drop those columns}
+# x_table1<-data.frame(x_table)
+# for(i in 1:ncol(x_table)) {       # for-loop over columns
+#   num_of_na<-nrow(x_table[x_table[,i]<0,])
+#   print(num_of_na)
+#   print(name_col<-names(x_table)[i])
+#   name_col<-names(x_table)[i]
+#   if ( num_of_na >2000) {
+#     x_table1<-x_table1[ , !(colnames(x_table1) %in% c(name_col))]
+#   }
+#   
+# }
+
+```
+
+```{r, double check remained column}
+# for(i in 1:ncol(x_table1)) {       # for-loop over columns
+#   num_of_na<-nrow(x_table1[x_table1[,i]<0,])
+#   print(num_of_na)
+#   }
+```
+
+```{r, prepare x, replace all negative values to NA}
+# x_na<-data.frame(x_table1)
+# x_na[x_na < 0] <- NA
+# x_na$idnum<-as.character(x_na$idnum)
+# x_na$p4b23<-as.numeric(x_na$p4b23)
+# x_na %<>% mutate_at(c(2:47,49:54), factor)
+```
+
+```{r, impute NA for all categorical columns}
+# x.impmi<-mice(x_na[,c(2:47,49:54)], m = 5,method='polr',maxit=5,            
+#                  diagnostics=TRUE)
+```
+
+```{r, merge the imputed back}
+# x.impmi$imp$k5e2a
+# imp_data<-mice::complete(x.impmi)
+# #write.csv(imp_data,"impute_factors.csv", row.names = FALSE)
+# str(imp_data)
+# str(x_na)
+```
+
+```{r,impute the numeric column and merge it back, x_variables finished}
+# x_na1<-data.frame(imp_data)
+# x.impmi2<-mice(x_na[,c(1,48)], m = 5,method='pmm',maxit=5,            
+#                  diagnostics=TRUE)
+# imp_data2<-mice::complete(x.impmi2)
+# imp_data2<-data.frame(imp_data2)
+# #write.csv(imp_data2,"impute_num.csv", row.names = FALSE)
+# impute_all<-cbind(imp_data2,imp_data)
+# #write.csv(impute_all,"x_variables.csv", row.names = FALSE)
+# str(impute_all)
+# summary(impute_all)
+# summary(x_na)
+```
+*we have two choices, leave the categorical as categorical or change it to numeric. I tried both method and I found numeric is better. We can change it to numeric directly because they are ordered categorical columns in our project.*  
+
+```{r, EDA start}
+y_data<-read.csv('data/final_y_100.csv')
+x_data<-read.csv('data/x_variables.csv')
+x_data$idnum<-as.character(x_data$idnum)
+x_data$p4b23<-as.numeric(x_data$p4b23)
+#x_data %<>% mutate_at(c(3:54), factor)
+#str(x_data)
+cleaned_data<-merge(x_data,y_data,on='idnum')
+data.fl<-select(cleaned_data,-c(1))
+#str(cleaned_data)
+summary(data.fl)
+```
+
+Some EDA
+
+```{r}
+data.fl%>%ggplot(aes(x=wellbeing))+geom_histogram(bins=25,colour = 1, fill = "white")
+data.fl%>%ggplot(aes(x=wellbeing))+
+  geom_histogram(aes(y=..density..),bins=25,colour = 1, fill = "white")+
+  geom_density(lwd = 1.2,
+               linetype = 2,
+               colour = 2)+theme_light()
+```
+In our study, what we want to study is the children's wellbeing, so we first take a look at the distribution of their wellbeing grades.The histogram is little skewed to the left.
+
+Let's also pick a few x columns and look their distribution
+```{r}
+data.fl%>%select(p4l11,m2h8e,m4i0p)%>%
+  ggplot(aes(x=p4l11,fill=factor(p4l11)))+geom_bar()+
+  ggtitle(' Child is sympathetic toward other children\'s distress\n 0-Not true, 1-Very True')
+
+data.fl%>%select(p4l11,m2h8e,m4i0p)%>%
+  ggplot(aes(x=m2h8e,fill=factor(m2h8e)))+geom_bar()+
+  ggtitle('Since child\'s birth, have you received help from-WIC Program?\n 1-Yes, 2-No')
+
+data.fl%>%select(p4l11,m2h8e,m4i0p)%>%
+  ggplot(aes(x=m4i0p,fill=factor(m4i0p)))+geom_bar()+
+  ggtitle('Participate in any groups (sr ctr/social/work group/church/charity/service/comm\n 1-Yes, 2-No')
+```
+
+```{r}
+set.seed(1) 
+# 2800 train, 307 testing, 300 validation
+N <- 3407
+idx_train <- sample(N, 2800)
+idx_no_train <- (which(! seq(1:N) %in% idx_train))
+idx_test <- sample( idx_no_train, 307)
+idx_val <- which(! idx_no_train %in% idx_test)
+
+data.train <- data.fl[idx_train,]
+data.test <- data.fl[idx_test,]
+data.val <- data.fl[idx_val,]
+```
+
+Model 1: Linear Regression.
+I tried linear regression first, the r-square is low.
+
+
+```{r}
+#linear
+fit.lm.all<-lm(wellbeing~.,data.train)
+summary(fit.lm.all)
+Anova(fit.lm.all)
+```
+
+Model selection with Cp
+
+```{r}
+fit.exh <- regsubsets(wellbeing~.,data.train , nvmax=25, method="backward")
+f.e <- summary(fit.exh)
+plot(f.e$cp, xlab="Number of predictors", 
+     ylab="Cp", col="red", pch=16)
+```
+
+We'll go with 17.
+
+```{r}
+fit.exh.var <- f.e$which
+colnames(fit.exh.var)[fit.exh.var[17,]] 
+```
+
+The final lm model will use these 17 variables
+```{r}
+fit.lm.final <- lm(wellbeing ~ k5e2a+f1e3+m1a13+m1f5+m1b18+m2d3a+m2h8e+m2h19b+p4b15+p4l11+p4l19+p4l43+m4i0g+m4h4+m4i0p+f4i8a1+f4a2, data.train)   
+summary(fit.lm.final)
+predict.lm <- predict(fit.lm.final, subset(data.test, select = -c(wellbeing))) 
+test.err.lm = mean((data.test$wellbeing-predict.lm)^2)
+test.err.lm
+```
+
+Still bad. Can consider forcing in some features but I don't think there will be a huge improvement.
+Model 2: linear model with LASSO.
+
+```{r}
+#lasso for linear
+Y <- data.train[, 54] # extract Y
+X.fl <- model.matrix(wellbeing~., data=data.train)[, -1] # take the first column's of 1 out
+
+#Step 2: Find x's output from LASSO with min cross-validation error
+set.seed(10)  # to control the ramdomness in K folds 
+fit.fl.cv <- cv.glmnet(X.fl, Y, alpha=1, nfolds=10, intercept = T) 
+coef.1se <- coef(fit.fl.cv, s="lambda.1se")  #s=c("lambda.1se","lambda.min") or lambda value
+plot(fit.fl.cv)
+
+#testing error
+predict.lm.lasso1 <- predict(fit.fl.cv, as.matrix(subset(data.test, select = -c(wellbeing) )),s="lambda.1se")
+test.err.lm.lasso1 = mean((data.test$wellbeing-predict.lm.lasso1)^2)
+test.err.lm.lasso1
+```
+
+Model 3: relaxed LASSO for lm()
+```{r}
+coef.1se <- coef.1se[which(coef.1se !=0),]   # get the non=zero coefficients
+var.1se <- rownames(as.matrix(coef.1se))[-1] # output the names  dim(as.matrix(coef.min))
+
+data.fl.sub <-  data.fl[,c("wellbeing","m2h8e", "p4l11",
+                           "p4l32", "m4h4","m4i0p","p4b9")] 
+#names(data.fl.sub)
+fit.1se.lm <- lm(wellbeing~., data=data.fl.sub)  # debiased or relaxed LASSO
+summary(fit.1se.lm) 
+plot(fit.1se.lm,1)
+plot(fit.1se.lm,2)
+
+#testing error
+predict.lm.lasso2 <- predict(fit.1se.lm, subset(data.test, select = -c(wellbeing))) 
+test.err.lm.lasso2 = mean((data.test$wellbeing-predict.lm.lasso2)^2)
+test.err.lm.lasso2
+```
+
+Model 4: logistic regression
+Then I tried logistic regression, by defining 70+ as good wellbeing (1). 
+The significant variables makes some sense, but I think it's still not good. 
+We should move to random forest. 
+
+```{r}
+#logistic: change to 0-1 labels
+data.train1<-data.frame(data.train)
+data.train1$wellbeing[data.train1$wellbeing < 70]<-0
+data.train1$wellbeing[data.train1$wellbeing >= 70] <- 1
+data.train1$wellbeing<-as.factor(data.train1$wellbeing)
+
+data.test1<-data.frame(data.test)
+data.test1$wellbeing[data.test1$wellbeing < 70]<-0
+data.test1$wellbeing[data.test1$wellbeing >= 70] <- 1
+data.test1$wellbeing<-as.factor(data.test1$wellbeing)
+```
+
+```{r}
+# with all variables
+fit.all1<-glm(wellbeing~.,data.train1, family =binomial)
+summary(fit.all1)
+Anova(fit.all1)
+```
+
+Logistic regression with LASSO
+```{r}
+# LASSO
+Y1 <- data.train1[, 54] # extract Y
+X.fl1 <- model.matrix(wellbeing~., data=data.train1)[, -1] # take the first column's of 1 out
+#Step 2: Find x's output from LASSO with min cross-validation error
+set.seed(10)  # to control the ramdomness in K folds 
+fit.fl.cv1 <- cv.glmnet(X.fl1, Y1, family="binomial",alpha=1, nfolds=10,  type.measure = "deviance") 
+coef.1se1 <- coef(fit.fl.cv1, s='lambda.1se')  #s=c("lambda.1se","lambda.min") or lambda value
+plot(fit.fl.cv1)
+
+#testing error
+predict.lr.lasso1 <- predict(fit.fl.cv1, as.matrix(subset(data.test, select = -c(wellbeing) )), type = "class", s="lambda.1se")
+test.err.lr.lasso1 = mean(data.test1$wellbeing != predict.lr.lasso1)
+test.err.lr.lasso1
+```
+
+Model 5: relaxed LASSO for glm()
+```{r}
+# relaxed LASSO
+coef.1se1<- coef.1se1[which(coef.1se1 !=0),]   # get the non=zero coefficients
+var.1se1 <- rownames(as.matrix(coef.1se1))[-1] # output the names  dim(as.matrix(coef.1se1))
+
+data.fl.sub1 <-  data.train1[,c("wellbeing",'k5e2a','m1a7','m2g6c','m2g4c',
+                             "m2h8e", "p4l11","p4l43", "m4h4","m4i0p","p4b9",'p4b21_1')]
+
+data.fl.sub1 <-  data.train1[,c("wellbeing",var.1se1)]
+
+#names(data.fl.sub)
+fit.1se.glm <- glm(wellbeing~., data=data.fl.sub1,family=binomial)  # debiased or relaxed LASSO
+summary(fit.1se.glm)
+fit.1se.glm.pred<- ifelse(fit.1se.glm$fitted > 0.5, "1", "0")
+table(fit.1se.glm.pred,data.train1$wellbeing)
+
+# testing error
+predict.lr.lasso2 <- predict(fit.1se.glm, subset(data.test1, select = -c(wellbeing)), type = "response")
+class.lr.lasso2 <- ifelse(predict.lr.lasso2 > .5, "1", "0")
+test.err.lr.lasso2 <- mean(data.test1$wellbeing != class.lr.lasso2)
+test.err.lr.lasso2
+```
+
+Model 6: random forest
+```{r}
+# randomforest
+fit.rf <- randomForest(wellbeing~.,data.train1, mtry=5, ntree=500)
+plot(fit.rf, pch=16, type="p", main="Training Error vs. ntree")
+legend("topleft", c('OOB MSE error', 'class-0 error', 'class-1 error'), col=1:3, cex=0.8, fill=1:3)
+```
+
+An ntree > 100 can settle the OOB testing errors. We will go with ntree = 300.
+
+```{r}
+#set.seed(1)
+#rf.error.p <- 1:50  # set up a vector of length 50
+#for (p in 1:50)  # repeat the following code inside { } 50 times
+#{
+#  fit.rf.1 <- randomForest(wellbeing~., data.train1, mtry=p, ntree=300)
+#  rf.error.p[p] <- fit.rf.1$err.rate[300]  # collecting oob mse based on 300 trees
+#}
+
+rf.error.p = c(0.4267857, 0.4157143, 0.4317857, 0.4210714, 0.4403571, 0.4396429, 0.4371429, 0.4400000, 0.4364286, 0.4335714, 0.4325000, 0.4378571, 0.4300000, 0.4271429, 0.4489286, 0.4367857, 0.4425000, 0.4435714, 0.4353571, 0.4421429, 0.4500000, 0.4482143, 0.4400000, 0.4482143, 0.4425000, 0.4510714, 0.4471429, 0.4375000, 0.4367857, 0.4539286, 0.4421429, 0.4364286, 0.4392857, 0.4510714, 0.4414286, 0.4453571, 0.4389286, 0.4325000, 0.4535714, 0.4500000, 0.4432143, 0.4339286, 0.4410714, 0.4521429, 0.4457143, 0.4578571, 0.4585714, 0.4442857, 0.4467857, 0.4389286)
+
+plot(1:50, rf.error.p, pch=16,
+     main = "Testing errors of mtry with 300 trees",
+     xlab="mtry",
+     ylab="OOB mse of mtry")
+lines(1:50, rf.error.p)
+```
+
+We'll go with mtry=14 so our final model will use ntree=300 and mtry=17.
+
+```{r}
+# final model
+set.seed(1)
+fit.rf.final <- randomForest(wellbeing~.,data.train1, mtry=14, ntree=300)
+
+# Testing error
+fit.rf.final.pred.y <- predict(fit.rf.final, subset(data.test1, select = -c(wellbeing)), type="response") # majority vote
+fit.rf.final.test.err <- mean(data.test1$wellbeing != fit.rf.final.pred.y)
+fit.rf.final.test.err
+```
+
