@@ -27,3 +27,5 @@ This is the out-of-bag error for the random forest model, which is used to pick 
 This is the out-of-bag error for the random forest model with 300 trees, and we want to pick the number of features used for each split. 
 
 ![](images/tree.png)
+
+If you are interested in more details, please go to read "Liu-fragile_families.pdf". 
