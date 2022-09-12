@@ -21,7 +21,9 @@ There are two environmental exposures negatively predictive of adolesent wellbei
 
 
 ![](images/OOB_error.png)
+This is the out-of-bag error for the random forest model, which is used to pick the number of trees. 
 
 ![](images/OOB_mtry.png)
+This is the out-of-bag error for the random forest model with 300 trees, and we want to pick the number of features used for each split. 
 
 ![](images/tree.png)
