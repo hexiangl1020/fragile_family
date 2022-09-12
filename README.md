@@ -14,6 +14,8 @@ Where there is a robust body of work about early predictors of adolescent outcom
 ## Models
 We tested a variety of models to understand the relationship between early life factors and adolescent wellbeing. Model 1 includes linear regression, linear regression with LASSO regularization, relaxed LASSO in linear regression. We then used a 0-1 classification in Model 2 to test logistic regression with LASSO and relaxed LASSO in logistic regression. Model 3 tests a random forest model with the addition of PCA transformed data. Model 4 tests a LASSO logistic model with PCA scores. Finally, we used bagging to build an ensemble model and chose Model 3 with a representative tree with 5 nodes for interpretation.
 
+The best model we chose based on testing and training was the random forest model, which is the Model 3. The finial validation error is 0.076. 
+
 ## Results
 There are two environmental exposures negatively predictive of adolesent wellbeing- household smoking and prenatal alcohol consumption. Community saftey, cohesion (willingness of neighbors to help each other) and avaliability of social services like food stamps are also important contributors of wellbeing. Finally, father's self report of life satisfaction and investment in their child's life are important predictive factors. There are a couple of factors that have a neuanced interpretation. For example, not having a computer in the home is associated with wellbeing. We may expect that family access to technology would facilitate accessing resources that promote healthy development. That said, excessive exposure to screens is well understood to stiffen brain maturation in early life. 
 
